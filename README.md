@@ -12,4 +12,6 @@ The program implements only a few commands that control the frequency of the mai
 
 The necessary commands can be supplemented based on the directory. For instance - http://www.plicht.de/ekki/civ/civ-p0a.html
 
+In the program, as an example, a synthesizer based on AD9850 is controlled.
+
 PS: Comments in the program in Russian. Sorry.
