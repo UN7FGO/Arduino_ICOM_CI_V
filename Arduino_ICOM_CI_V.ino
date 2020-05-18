@@ -6,11 +6,30 @@
 #define TRX_ADDR 0x48
 
 // Описываем подключение модуля AD9850
-#define W_CLK 5
-#define FQ_UD 4
-#define DATA  3 
-#define RESET 2
+#define W_CLK 8
+#define FQ_UD 7
+#define DATA  6 
+#define RESET 5
 #define pulseHigh(pin) {digitalWrite(pin, HIGH); digitalWrite(pin, LOW); }
+
+ // transfers a byte, a bit at a time, LSB first to the 9850 via serial DATA line
+void tfr_byte(byte data)
+{
+  for (int i=0; i<8; i++, data>>=1) {
+    digitalWrite(DATA, data & 0x01);
+    pulseHigh(W_CLK);   //after each bit sent, CLK is pulsed high
+  }
+}
+
+ // frequency calc from datasheet page 8 = <sys clock> * <frequency tuning word>/2^32
+void sendFrequency(double frequency) {
+  int32_t freq = frequency * 4294967295/124992000;  // note 125 MHz clock on 9850
+  for (int b=0; b<4; b++, freq>>=8) {
+    tfr_byte(freq & 0xFF);
+  }
+  tfr_byte(0x000);   // Final control byte, all 0 for 9850 chip
+  pulseHigh(FQ_UD);  // Done!  Should see output
+}
 
 
 // массив под получаемые команды
@@ -18,7 +37,7 @@ byte buffer[32];
 // счетчик полученных байт
 byte rcv_byte = 0;
 // текущая частота работы
-unsigned long current_freq = 12345678;
+unsigned long current_freq = 7125000;
 unsigned long old_freq = 0;
 
 // временные переменные
@@ -30,15 +49,26 @@ unsigned long fr, mn;
 void setup() {
   // start serial port at 9600 bps and wait for port to open:
   Serial.begin(9600);
-  
-  sendFrequency(current_freq);
 
+// configure arduino data pins for output
+  pinMode(FQ_UD, OUTPUT);
+  pinMode(W_CLK, OUTPUT);
+  pinMode(DATA, OUTPUT);
+  pinMode(RESET, OUTPUT);
+   
+  pulseHigh(RESET);
+  pulseHigh(W_CLK);
+  pulseHigh(FQ_UD);  // this pulse enables serial mode - Datasheet page 12 figure 10
 }
 
 void loop() {
+  if (current_freq != old_freq) {
+    sendFrequency(current_freq);
+    old_freq = current_freq;
+  }
 
   if (Serial.available() > 0) {
-    delay(20);
+    delay(10);
     rcv_byte = 0;
     St = "";
     while (Serial.available() > 0) {
@@ -70,8 +100,6 @@ void loop() {
           mn = mn / 10;
         }    
         current_freq = fr;
-        sendFrequency(current_freq);
-        
         Serial.write(0xFE);
         Serial.write(0xFE);
         Serial.write(C_ADDR);
@@ -128,8 +156,6 @@ void loop() {
           mn = mn / 10;
         }    
         current_freq = fr;
-        sendFrequency(current_freq);
-        
         Serial.write(0xFE);
         Serial.write(0xFE);
         Serial.write(C_ADDR);
@@ -165,32 +191,5 @@ void loop() {
       }
     }
     delay(200);
-  }
-  
-}
-
-
-// Передаем байт побитно, начиная с младшего бита, в AD9850, по последовательному интерфейсу 
-// transfers a byte, a bit at a time, LSB first to the 9850 via serial DATA line
-void tfr_byte(byte data)
-{
-  for (int i=0; i<8; i++, data>>=1) {
-    digitalWrite(DATA, data & 0x01);
-    pulseHigh(W_CLK);   //after each bit sent, CLK is pulsed high
-  }
-}
-
-// расчитываем коэффициент деления для формирования AD9850 нужной нам частоты
-// передаем нужные коэффициенты на AD9850
-// frequency calc from datasheet page 8 = <sys clock> * <frequency tuning word>/2^32
-void sendFrequency(double frequency) {
-  if (current_freq != old_freq) {
-    int32_t freq = frequency * 4294967295/125000000;  // note 125 MHz clock on 9850
-    for (int b=0; b<4; b++, freq>>=8) {
-      tfr_byte(freq & 0xFF);
-    }
-    tfr_byte(0x000);   // Final control byte, all 0 for 9850 chip
-    pulseHigh(FQ_UD);  // Done!  Should see output
-    old_freq = current_freq;
-  }
+  } 
 }
