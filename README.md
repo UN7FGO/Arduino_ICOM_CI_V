@@ -14,4 +14,6 @@ The necessary commands can be supplemented based on the directory. For instance 
 
 In the program, as an example, a synthesizer based on AD9850 is controlled.
 
+The second version of the sketch implements support for the SI5351 synthesizer.
+
 PS: Comments in the program in Russian. Sorry.
