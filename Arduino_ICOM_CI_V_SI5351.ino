@@ -30,13 +30,13 @@ void setup() {
   
   bool i2c_found;
   i2c_found = si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);
-  si5351.set_freq(current_freq, SI5351_CLK2);
+  si5351.set_freq(current_freq*100, SI5351_CLK0);
   si5351.drive_strength(SI5351_CLK0, SI5351_DRIVE_8MA);    
 }
 
 void loop() {
   if (current_freq != old_freq) {
-    si5351.set_freq(current_freq, SI5351_CLK0);
+    si5351.set_freq(current_freq*100, SI5351_CLK0);
     old_freq = current_freq;
   }
 
